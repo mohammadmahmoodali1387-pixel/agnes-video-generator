@@ -18,8 +18,6 @@ jobs:
       - name: Run video generator
         env:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
-
         run: |
           python generate_video.py "Ultra-realistic cinematic macro ASMR video of six tiny miniature construction workers building a beautiful wooden cabin from scratch on a real wooden workbench. The tiny workers wear yellow safety helmets and realistic work clothes. They measure wooden planks, saw the wood, hammer tiny nails and build the cabin step by step. Detailed wood grain, miniature tools, realistic movements, macro camera, warm cinematic lighting, shallow depth of field. Natural ASMR sounds of sawing, hammering, footsteps and scraping wood. No dialogue, no music, no subtitles, no cartoon style. Photorealistic." --duration 10
-
-        
+          
