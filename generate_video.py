@@ -24,7 +24,7 @@ import urllib.request
 from typing import Any, Optional
 
 # ==================== 常量配置区 ====================
-API_KEY: str = "sk-wtQ84SRJzizAfKWm9m6hbzqYvg5S7rR2ZDlLKcHouC29ncpA"
+API_KEY: str = os.environ.get("AGNES_API_KEY", "")
 BASE_URL: str = "https://apihub.agnes-ai.cn/v1"
 MODEL_NAME: str = "agnes-video-v2.0"
 FRAME_RATE: int = 24
