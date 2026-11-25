@@ -1,10 +1,9 @@
-
 name: Miniature ASMR Video
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "0 */2 * * *"
 
 jobs:
   generate:
