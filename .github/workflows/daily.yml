@@ -109,7 +109,7 @@ jobs:
             fi
 
             echo "Generation failed. Waiting 60 seconds before retry."
-            sleep 60
+            sleep 300
           done
 
           if ! find outputs -maxdepth 1 -type f -name "*.mp4" | grep -q .; then
