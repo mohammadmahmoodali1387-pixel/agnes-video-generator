@@ -1,14 +1,14 @@
-name: Miniature ASMR Video
+name: TinyBuild ASMR Daily Videos
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 9,17 * * *"
 
 jobs:
-  generate:
+  generate-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -19,18 +19,119 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Generate video
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt requests
+
+      - name: Choose project and prepare metadata
+        run: |
+          PROJECTS=(
+            "a tiny wooden cabin"
+            "a miniature stone bridge"
+            "a tiny brick house"
+            "a miniature clock tower"
+            "a tiny watermill"
+            "a miniature train station"
+            "a tiny castle"
+            "a miniature garage"
+            "a tiny lighthouse"
+            "a miniature windmill"
+            "a tiny workshop"
+            "a miniature wooden barn"
+            "a tiny garden pavilion"
+            "a miniature fire station"
+            "a tiny schoolhouse"
+            "a miniature bakery"
+            "a tiny stone fountain"
+            "a miniature suspension bridge"
+            "a tiny observatory"
+            "a miniature treehouse"
+            "a tiny harbor dock"
+            "a miniature greenhouse"
+            "a tiny mountain chalet"
+            "a miniature library"
+            "a tiny factory"
+            "a miniature railway tunnel"
+            "a miniature watchtower"
+            "a tiny village gate"
+            "a miniature cafe"
+            "a tiny stone cottage"
+          )
+
+          DAY_NUMBER=$(date -u +%j)
+          HOUR_NUMBER=$(date -u +%H)
+          DAY_NUMBER=$((10#$DAY_NUMBER))
+          HOUR_NUMBER=$((10#$HOUR_NUMBER))
+
+          if [ "$HOUR_NUMBER" -lt 13 ]; then
+            SLOT=0
+          else
+            SLOT=1
+          fi
+
+          INDEX=$(((DAY_NUMBER * 2 + SLOT) % ${#PROJECTS[@]}))
+          PROJECT="${PROJECTS[$INDEX]}"
+
+          PROJECT_TAG=$(echo "$PROJECT" | sed 's/[^a-zA-Z0-9]//g')
+
+          TITLE="Tiny Workers Build ${PROJECT} in 10 Seconds! #Shorts"
+
+          DESCRIPTION="Watch tiny construction workers build ${PROJECT} from start to finish in one complete miniature ASMR video. Enjoy satisfying construction sounds, tiny tools and realistic craftsmanship. #TinyBuildASMR #MiniatureConstruction #ASMR #Shorts #${PROJECT_TAG}"
+
+          TAGS="TinyBuildASMR,MiniatureConstruction,ASMR,Shorts,${PROJECT_TAG}"
+
+          PROMPT="Create ONE complete standalone 10-second ultra-realistic miniature construction ASMR video. Six tiny realistic construction workers wearing yellow safety helmets and work clothes build ${PROJECT} from scratch on a detailed miniature workbench scene. Show the complete project from an empty foundation to a fully finished construction in the same video. Use fast but believable miniature movements: prepare the foundation, assemble the structure, install details, and finish the project. The construction MUST be completely finished before the video ends. End with a beautiful cinematic macro reveal of the completed project. Photorealistic materials, detailed textures, tiny tools, warm cinematic lighting, shallow depth of field. Satisfying natural ASMR sounds of sawing, hammering, drilling, footsteps and material scraping. No dialogue, no music, no subtitles, no cartoon style. This is not a series and not an episode. Do not leave the project unfinished."
+
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "YOUTUBE_TITLE=$TITLE" >> "$GITHUB_ENV"
+          echo "YOUTUBE_DESCRIPTION=$DESCRIPTION" >> "$GITHUB_ENV"
+          echo "YOUTUBE_TAGS=$TAGS" >> "$GITHUB_ENV"
+          echo "PROMPT=$PROMPT" >> "$GITHUB_ENV"
+
+          echo "Today's project: $PROJECT"
+
+      - name: Generate video with retry
         env:
           AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
         run: |
-          python generate_video.py "Ultra-realistic cinematic macro ASMR video of six tiny miniature construction workers building a beautiful wooden cabin from scratch on a real wooden workbench. The tiny workers wear yellow safety helmets and realistic work clothes. They measure wooden planks, saw the wood, hammer tiny nails and build the cabin step by step. Detailed wood grain, miniature tools, realistic movements, macro camera, warm cinematic lighting, shallow depth of field. Natural ASMR sounds of sawing, hammering, footsteps and scraping wood. No dialogue, no music, no subtitles, no cartoon style. Photorealistic." --duration 10
+          mkdir -p outputs
+          rm -f outputs/*.mp4
 
-      - name: Upload generated video
+          for attempt in 1 2 3; do
+            echo "Generation attempt $attempt of 3"
+
+            if python generate_video.py "$PROMPT" --duration 10; then
+              if find outputs -maxdepth 1 -type f -name "*.mp4" | grep -q .; then
+                echo "Video generated successfully."
+                break
+              fi
+            fi
+
+            echo "Generation failed. Waiting 60 seconds before retry."
+            sleep 60
+          done
+
+          if ! find outputs -maxdepth 1 -type f -name "*.mp4" | grep -q .; then
+            echo "No video was generated after 3 attempts."
+            exit 1
+          fi
+
+      - name: Save video backup
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: miniature-cabin-asmr
+          name: tinybuild-asmr-${{ github.run_id }}
           path: outputs/*.mp4
           if-no-files-found: error
           retention-days: 3
+
+      - name: Upload video to YouTube
+        if: success()
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python upload_youtube.py
           
